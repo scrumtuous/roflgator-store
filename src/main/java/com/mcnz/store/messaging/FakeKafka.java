@@ -12,7 +12,7 @@ public class FakeKafka {
     public static void start() {
         broker = new EmbeddedKafkaKraftBroker(1, 3,
                 "roflgator-purchases.validate", "roflgator-purchases.process");
-        broker.brokerListProperty("roflgator-spring.kafka.bootstrap-servers");
+        broker.brokerListProperty("spring.kafka.bootstrap-servers");
         broker.afterPropertiesSet();
         Runtime.getRuntime().addShutdownHook(new Thread(new StopKafka()));
     }
