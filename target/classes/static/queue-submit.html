@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>POST /queue/purchases</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+    <nav id="nav"></nav>
+    <label>API Base URL
+        <input id="baseUrl" type="text" placeholder="http://localhost:8080">
+    </label>
+</header>
+
+<form id="requestForm" novalidate>
+    <label>customerId
+        <input id="customerId" type="number" min="1" value="1" required>
+    </label>
+    <label>productId
+        <input id="productId" type="number" min="1" value="1" required>
+    </label>
+    <label>quantity
+        <input id="quantity" type="number" min="1" value="1" required>
+    </label>
+    <button id="submitBtn" type="submit">Send Request</button>
+</form>
+
+<h2>Result</h2>
+<pre id="output"></pre>
+
+<script src="common.js"></script>
+<script>
+    StoreDemo.initPage("queue-submit");
+
+    document.getElementById("requestForm").addEventListener("submit", async function (event) {
+        event.preventDefault();
+        StoreDemo.setLoading(true);
+
+        var formData = new URLSearchParams({
+            customerId: document.getElementById("customerId").value,
+            productId: document.getElementById("productId").value,
+            quantity: document.getElementById("quantity").value
+        });
+
+        try {
+            var url = StoreDemo.buildUrl("/queue/purchases");
+            var response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: formData.toString()
+            });
+            var body = await response.text();
+            if (!response.ok) {
+                StoreDemo.setOutput("HTTP " + response.status + "\n" + StoreDemo.formatResponseBody(body), true);
+                return;
+            }
+            StoreDemo.setOutput(StoreDemo.formatResponseBody(body), false);
+        } catch (err) {
+            StoreDemo.setOutput("Request failed: " + err.message, true);
+        } finally {
+            StoreDemo.setLoading(false);
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\Address.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\App.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\Customer.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\data\CustomerRepository.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\data\ProductRepository.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\data\PurchaseRepository.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\data\StorePurchasesData.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\data\StoreRestMockData.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\messaging\FakeKafka.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\messaging\StoreConsumers.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\messaging\StoreProducers.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\Product.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\Purchase.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\PurchaseStatus.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\service\StoreService.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\web\PurchaseController.java
+C:\_world-travels\roflgator-store\src\main\java\com\mcnz\store\web\StoreRestController.java

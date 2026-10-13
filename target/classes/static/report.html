@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GET /api/report</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+    <nav id="nav"></nav>
+    <label>API Base URL
+        <input id="baseUrl" type="text" placeholder="http://localhost:8080">
+    </label>
+</header>
+
+<form id="requestForm" novalidate>
+    <button id="submitBtn" type="submit">Send Request</button>
+</form>
+
+<h2>Result</h2>
+<pre id="output"></pre>
+
+<script src="common.js"></script>
+<script>
+    StoreDemo.initPage("report");
+
+    document.getElementById("requestForm").addEventListener("submit", async function (event) {
+        event.preventDefault();
+        StoreDemo.setLoading(true);
+
+        try {
+            var url = StoreDemo.buildUrl("/api/report");
+            var response = await fetch(url);
+            var body = await response.text();
+            if (!response.ok) {
+                StoreDemo.setOutput("HTTP " + response.status + "\n" + StoreDemo.formatResponseBody(body), true);
+                return;
+            }
+            StoreDemo.setOutput(StoreDemo.formatResponseBody(body), false);
+        } catch (err) {
+            StoreDemo.setOutput("Request failed: " + err.message, true);
+        } finally {
+            StoreDemo.setLoading(false);
+        }
+    });
+</script>
+</body>
+</html>

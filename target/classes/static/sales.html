@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>POST /api/sales</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+    <nav id="nav"></nav>
+    <label>API Base URL
+        <input id="baseUrl" type="text" placeholder="http://localhost:8080">
+    </label>
+</header>
+
+<p>POST /api/sales</p>
+
+<form id="requestForm" novalidate>
+    <label>date (yyyy-mm-dd)
+        <input id="date" type="date" required>
+    </label>
+    <label>customerName
+        <input id="customerName" type="text" value="Cameron" required>
+    </label>
+    <label>zip
+        <input id="zip" type="text" value="90210" required>
+    </label>
+    <label>city
+        <input id="city" type="text" value="Los Angeles" required>
+    </label>
+    <label>productName
+        <input id="productName" type="text" value="Laptop" required>
+    </label>
+    <label>quantity
+        <input id="quantity" type="number" min="1" value="1" required>
+    </label>
+    <label>price
+        <input id="price" type="number" min="0" step="0.01" value="499.99" required>
+    </label>
+    <button id="submitBtn" type="submit">Send Request</button>
+</form>
+
+<h2>Result</h2>
+<pre id="output"></pre>
+
+<script src="common.js"></script>
+<script>
+    StoreDemo.initPage("sales");
+
+    if (!document.getElementById("date").value) {
+        document.getElementById("date").value = new Date().toISOString().slice(0, 10);
+    }
+
+    document.getElementById("requestForm").addEventListener("submit", async function (event) {
+        event.preventDefault();
+        StoreDemo.setLoading(true);
+
+        var formData = new URLSearchParams({
+            date: document.getElementById("date").value,
+            customerName: document.getElementById("customerName").value,
+            zip: document.getElementById("zip").value,
+            city: document.getElementById("city").value,
+            productName: document.getElementById("productName").value,
+            quantity: document.getElementById("quantity").value,
+            price: document.getElementById("price").value
+        });
+
+        try {
+            var url = StoreDemo.buildUrl("/api/sales");
+            var response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: formData.toString()
+            });
+            var body = await response.text();
+            if (!response.ok) {
+                StoreDemo.setOutput("HTTP " + response.status + "\n" + StoreDemo.formatResponseBody(body), true);
+                return;
+            }
+            StoreDemo.setOutput(StoreDemo.formatResponseBody(body), false);
+        } catch (err) {
+            StoreDemo.setOutput("Request failed: " + err.message, true);
+        } finally {
+            StoreDemo.setLoading(false);
+        }
+    });
+</script>
+</body>
+</html>

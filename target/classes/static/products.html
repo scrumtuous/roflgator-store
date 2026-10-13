@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>GET /api/products</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+    <nav id="nav"></nav>
+    <label>API Base URL
+        <input id="baseUrl" type="text" placeholder="http://localhost:8080">
+    </label>
+</header>
+
+<form id="requestForm" novalidate>
+    <label>name (optional)
+        <input id="name" type="text" placeholder="phone">
+    </label>
+    <label>id (optional)
+        <input id="id" type="number" min="1" placeholder="1">
+    </label>
+    <button id="submitBtn" type="submit">Send Request</button>
+</form>
+
+<h2>Result</h2>
+<pre id="output"></pre>
+
+<script src="common.js"></script>
+<script>
+    StoreDemo.initPage("products");
+
+    document.getElementById("requestForm").addEventListener("submit", async function (event) {
+        event.preventDefault();
+        StoreDemo.setLoading(true);
+
+        var name = document.getElementById("name").value.trim();
+        var id = document.getElementById("id").value.trim();
+
+        if (!name && !id) {
+            StoreDemo.setOutput("Provide name or id before sending.", true);
+            StoreDemo.setLoading(false);
+            return;
+        }
+
+        try {
+            var url = StoreDemo.buildUrl("/api/products", { name: name, id: id });
+            var response = await fetch(url);
+            var body = await response.text();
+            if (!response.ok) {
+                StoreDemo.setOutput("HTTP " + response.status + "\n" + StoreDemo.formatResponseBody(body), true);
+                return;
+            }
+            StoreDemo.setOutput(StoreDemo.formatResponseBody(body), false);
+        } catch (err) {
+            StoreDemo.setOutput("Request failed: " + err.message, true);
+        } finally {
+            StoreDemo.setLoading(false);
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+Java 17; Maven build passed. End-to-end checks against embedded Kafka and H2:
+PASS: all 15 original purchase rows saved for 10 customers
+PASS: HTTP purchase saved through both Kafka topics
+PASS: rejected purchase not saved; next valid message processed
+PASS: existing report runs after processing
