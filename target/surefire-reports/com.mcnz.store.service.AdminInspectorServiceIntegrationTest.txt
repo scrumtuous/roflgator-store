@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.mcnz.store.service.AdminInspectorServiceIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 13.64 s -- in com.mcnz.store.service.AdminInspectorServiceIntegrationTest

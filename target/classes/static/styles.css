@@ -19,7 +19,7 @@ label {
 }
 
 input {
-    min-width: 260px;
+    min-width: 320px;
     padding: 4px;
 }
 
@@ -32,5 +32,34 @@ pre {
     background: #f5f5f5;
     border: 1px solid #ddd;
     padding: 12px;
+    white-space: pre-wrap;
+}
+
+.panel {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 14px 0;
+    background: #fff;
+}
+
+.two-col {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.muted {
+    color: #555;
+    font-size: 13px;
+}
+
+.warning {
+    background: #fff4e5;
+    border: 1px solid #f0ad4e;
+    color: #8a5200;
+    border-radius: 6px;
+    padding: 10px;
+    margin: 12px 0;
     white-space: pre-wrap;
 }

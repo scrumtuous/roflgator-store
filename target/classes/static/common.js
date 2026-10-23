@@ -8,7 +8,8 @@
         { id: "report", href: "report.html", label: "GET /api/report" },
         { id: "sales", href: "sales.html", label: "POST /api/sales" },
         { id: "queue-submit", href: "queue-submit.html", label: "POST /queue/purchases" },
-        { id: "queue-status", href: "queue-status.html", label: "GET /queue/purchases/{id}/status" }
+        { id: "queue-status", href: "queue-status.html", label: "GET /queue/purchases/{id}/status" },
+        { id: "admin", href: "admin.html", label: "Admin / Troubleshoot" }
     ];
 
     function defaultBaseUrl() {

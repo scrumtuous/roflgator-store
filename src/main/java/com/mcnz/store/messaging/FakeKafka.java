@@ -1,26 +1,34 @@
 package com.mcnz.store.messaging;
-import org.springframework.context.annotation.Profile;
 
 import org.springframework.kafka.test.EmbeddedKafkaKraftBroker;
+
+import com.mcnz.store.config.StoreKafkaTopics;
 
 /** Classroom infrastructure: starts Kafka before Spring creates the listeners. */
 public class FakeKafka {
 	
 
     private static EmbeddedKafkaKraftBroker broker;
+    private static boolean started;
 
-    public static void start() {
+    public static synchronized void start() {
+        if (started) {
+            return;
+        }
         broker = new EmbeddedKafkaKraftBroker(1, 3,
-                "roflgator-purchases.validate", "roflgator-purchases.process");
+                StoreKafkaTopics.VALIDATE, StoreKafkaTopics.PROCESS);
         broker.brokerListProperty("spring.kafka.bootstrap-servers");
         broker.afterPropertiesSet();
         Runtime.getRuntime().addShutdownHook(new Thread(new StopKafka()));
+        started = true;
     }
 
     private static class StopKafka implements Runnable {
         @Override
         public void run() {
-            broker.destroy();
+            if (broker != null) {
+                broker.destroy();
+            }
         }
     }
 }

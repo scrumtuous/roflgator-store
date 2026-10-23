@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import com.mcnz.store.Product;
 import com.mcnz.store.Purchase;
 import com.mcnz.store.PurchaseStatus;
+import com.mcnz.store.config.StoreKafkaTopics;
 import com.mcnz.store.service.StoreService;
 
 @Service
@@ -22,7 +23,7 @@ public class StoreConsumers {
     @Autowired
     private StoreService storeService;
 
-    @KafkaListener(topics = "roflgator-purchases.validate", groupId = "validators")
+    @KafkaListener(topics = StoreKafkaTopics.VALIDATE, groupId = "validators")
     public void validate(Long purchaseId) {
     	System.out.println("In the roflgator-validate listener");
         Purchase purchase = storeService.getPurchase(purchaseId);
@@ -36,10 +37,10 @@ public class StoreConsumers {
 
         System.out.println("VALIDATED: " + product.name);
         storeService.updatePurchaseStatus(purchaseId, PurchaseStatus.VALIDATED);
-        kafka.send("roflgator-purchases.process", Objects.requireNonNull(purchaseId)).join();
+        kafka.send(StoreKafkaTopics.PROCESS, Objects.requireNonNull(purchaseId)).join();
     }
 
-    @KafkaListener(topics = "roflgator-purchases.process", groupId = "processors")
+    @KafkaListener(topics = StoreKafkaTopics.PROCESS, groupId = "processors")
     public void process(Long purchaseId) {
     	System.out.println("In the processing listener");
         try {

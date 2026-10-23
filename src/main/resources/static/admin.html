@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Admin / Troubleshooting</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+    <nav id="nav"></nav>
+    <label>API Base URL
+        <input id="baseUrl" type="text" placeholder="http://localhost:8080">
+    </label>
+</header>
+
+<p>Inspect, test, and apply live DB/Kafka configuration. Hot switch is attempted first; restart fallback details are returned when needed.</p>
+
+<div id="configWarnings" class="warning" style="display:none"></div>
+
+<section class="panel">
+    <h2>Current Runtime Configuration</h2>
+    <button id="refreshConfigBtn" type="button">Refresh Config</button>
+    <pre id="currentConfig"></pre>
+</section>
+
+<section class="panel">
+    <h2>Target Profile</h2>
+    <label>Profile (for restart fallback)
+        <input id="profile" type="text" placeholder="aws or dev">
+    </label>
+    <p class="muted">Spring profile changes are persisted for restart; hot switching profile itself is not fully supported.</p>
+</section>
+
+<section class="panel two-col">
+    <div>
+        <h2>Database (PostgreSQL)</h2>
+        <label>JDBC URL
+            <input id="dbUrl" type="text" placeholder="jdbc:postgresql://host:5432/dbname">
+        </label>
+        <label>Username
+            <input id="dbUsername" type="text" placeholder="db user">
+        </label>
+        <label>Password
+            <input id="dbPassword" type="password" placeholder="db password">
+        </label>
+        <button id="testDbBtn" type="button">Test DB + List Databases</button>
+        <pre id="dbOutput"></pre>
+    </div>
+
+    <div>
+        <h2>Kafka</h2>
+        <label>Bootstrap Servers
+            <input id="kafkaBootstrap" type="text" placeholder="host:9092">
+        </label>
+        <button id="testKafkaBtn" type="button">Test Kafka + List Topics</button>
+        <pre id="kafkaOutput"></pre>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>Apply Configuration</h2>
+    <label>
+        <input id="attemptHotSwitch" type="checkbox" checked>
+        Attempt hot switch first
+    </label>
+    <label>
+        <input id="persistToContainer" type="checkbox" checked>
+        Persist settings inside container
+    </label>
+    <button id="applyBtn" type="button">Apply Settings</button>
+    <pre id="applyOutput"></pre>
+</section>
+
+<section class="panel">
+    <h2>Restart Application</h2>
+    <p class="muted">This sends a deliberate JVM exit to trigger container restart policies. Save changes first.</p>
+    <label>Reason
+        <input id="restartReason" type="text" placeholder="Apply persisted configuration">
+    </label>
+    <label>Delay (ms)
+        <input id="restartDelayMs" type="number" min="250" max="60000" value="1500">
+    </label>
+    <label>Exit code
+        <input id="restartExitCode" type="number" min="0" max="255" value="0">
+    </label>
+    <button id="restartBtn" type="button">Request Restart</button>
+    <pre id="restartOutput"></pre>
+</section>
+
+<section class="panel">
+    <h2>Application Logs</h2>
+    <label>Level (optional)
+        <input id="logLevel" type="text" placeholder="ERROR">
+    </label>
+    <label>Limit
+        <input id="logLimit" type="number" min="10" max="1000" value="200">
+    </label>
+    <label>
+        <input id="autoLogs" type="checkbox">
+        Auto-refresh every 5 seconds
+    </label>
+    <button id="refreshLogsBtn" type="button">Refresh Logs</button>
+    <pre id="logsOutput"></pre>
+</section>
+
+<h2>Request Status</h2>
+<pre id="output"></pre>
+
+<script src="common.js"></script>
+<script>
+    StoreDemo.initPage("admin");
+
+    var logIntervalId = null;
+
+    function pretty(value) {
+        return JSON.stringify(value, null, 2);
+    }
+
+    function setBlock(id, value, isError) {
+        var el = document.getElementById(id);
+        el.textContent = typeof value === "string" ? value : pretty(value);
+        el.style.color = isError ? "#b00020" : "#111";
+    }
+
+    async function requestJson(path, options) {
+        var url = StoreDemo.buildUrl(path);
+        var response = await fetch(url, options || {});
+        var body = await response.text();
+        var data = {};
+        if (body) {
+            try {
+                data = JSON.parse(body);
+            } catch (err) {
+                data = { raw: body };
+            }
+        }
+        if (!response.ok) {
+            throw new Error("HTTP " + response.status + " " + StoreDemo.formatResponseBody(body));
+        }
+        return data;
+    }
+
+    function formValues() {
+        return {
+            profile: document.getElementById("profile").value.trim(),
+            databaseUrl: document.getElementById("dbUrl").value.trim(),
+            databaseUsername: document.getElementById("dbUsername").value.trim(),
+            databasePassword: document.getElementById("dbPassword").value,
+            kafkaBootstrapServers: document.getElementById("kafkaBootstrap").value.trim(),
+            attemptHotSwitch: document.getElementById("attemptHotSwitch").checked,
+            persistToContainer: document.getElementById("persistToContainer").checked
+        };
+    }
+
+    function applyConfigToInputs(configResponse) {
+        if (!configResponse || !configResponse.runtime) {
+            return;
+        }
+
+        var runtime = configResponse.runtime;
+        document.getElementById("profile").value = runtime.desiredProfile || runtime.activeProfiles || "";
+        document.getElementById("dbUrl").value = runtime.databaseUrl || "";
+        document.getElementById("dbUsername").value = runtime.databaseUsername || "";
+        document.getElementById("kafkaBootstrap").value = runtime.kafkaBootstrapServers || "";
+    }
+
+    function showConfigWarnings(configResponse) {
+        var warningEl = document.getElementById("configWarnings");
+        if (!warningEl) {
+            return;
+        }
+
+        warningEl.style.display = "none";
+        warningEl.textContent = "";
+
+        if (!configResponse || !configResponse.runtime) {
+            return;
+        }
+
+        var runtime = configResponse.runtime;
+        var warnings = [];
+
+        if (runtime.databasePasswordBlank || runtime.databasePasswordMasked === "(empty)") {
+            warnings.push("WARNING: Database password is blank. Set spring.datasource.password before production use.");
+        }
+
+        if (runtime.warnings && runtime.warnings.length > 0) {
+            warnings = warnings.concat(runtime.warnings);
+        }
+
+        if (warnings.length === 0) {
+            return;
+        }
+
+        warningEl.style.display = "block";
+        warningEl.textContent = warnings.join("\n");
+    }
+
+    async function refreshConfig() {
+        StoreDemo.setOutput("Loading /admin/config ...", false);
+        try {
+            var data = await requestJson("/admin/config");
+            setBlock("currentConfig", data, false);
+            applyConfigToInputs(data);
+            showConfigWarnings(data);
+            StoreDemo.setOutput("Config loaded.", false);
+        } catch (err) {
+            StoreDemo.setOutput("Failed to load config: " + err.message, true);
+            setBlock("currentConfig", err.message, true);
+            showConfigWarnings(null);
+        }
+    }
+
+    async function testDatabase() {
+        var values = formValues();
+        StoreDemo.setOutput("Testing database...", false);
+        try {
+            var data = await requestJson("/admin/database/inspect", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    url: values.databaseUrl,
+                    username: values.databaseUsername,
+                    password: values.databasePassword
+                })
+            });
+            setBlock("dbOutput", data, !data.connected);
+            StoreDemo.setOutput(data.message, !data.connected);
+        } catch (err) {
+            setBlock("dbOutput", err.message, true);
+            StoreDemo.setOutput("Database test failed: " + err.message, true);
+        }
+    }
+
+    async function testKafka() {
+        var values = formValues();
+        StoreDemo.setOutput("Testing Kafka...", false);
+        try {
+            var data = await requestJson("/admin/kafka/inspect", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ bootstrapServers: values.kafkaBootstrapServers })
+            });
+            setBlock("kafkaOutput", data, !data.connected);
+            StoreDemo.setOutput(data.message, !data.connected);
+        } catch (err) {
+            setBlock("kafkaOutput", err.message, true);
+            StoreDemo.setOutput("Kafka test failed: " + err.message, true);
+        }
+    }
+
+    async function applyConfig() {
+        var values = formValues();
+        StoreDemo.setOutput("Applying settings...", false);
+        try {
+            var data = await requestJson("/admin/config/apply", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(values)
+            });
+            setBlock("applyOutput", data, data.errors && data.errors.length > 0);
+            StoreDemo.setOutput(data.outcome + (data.restartRequired ? " (restart required)" : ""), data.errors && data.errors.length > 0);
+            if (data.currentConfig) {
+                setBlock("currentConfig", data.currentConfig, false);
+                applyConfigToInputs(data.currentConfig);
+                showConfigWarnings(data.currentConfig);
+            }
+        } catch (err) {
+            setBlock("applyOutput", err.message, true);
+            StoreDemo.setOutput("Apply failed: " + err.message, true);
+        }
+    }
+
+    async function refreshLogs() {
+        var limit = document.getElementById("logLimit").value || "200";
+        var level = document.getElementById("logLevel").value.trim();
+        var path = "/admin/logs?limit=" + encodeURIComponent(limit) + "&includeFileTail=true";
+        if (level) {
+            path += "&level=" + encodeURIComponent(level);
+        }
+
+        try {
+            var data = await requestJson(path);
+            setBlock("logsOutput", data, false);
+            StoreDemo.setOutput("Logs refreshed.", false);
+        } catch (err) {
+            setBlock("logsOutput", err.message, true);
+            StoreDemo.setOutput("Log refresh failed: " + err.message, true);
+        }
+    }
+
+    async function restartApplication() {
+        var reason = document.getElementById("restartReason").value.trim() || "Admin requested restart";
+        var delayMs = parseInt(document.getElementById("restartDelayMs").value, 10);
+        var exitCode = parseInt(document.getElementById("restartExitCode").value, 10);
+
+        StoreDemo.setOutput("Scheduling restart...", false);
+        try {
+            var data = await requestJson("/admin/restart", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reason: reason, delayMs: delayMs, exitCode: exitCode })
+            });
+            setBlock("restartOutput", data, !data.accepted);
+            StoreDemo.setOutput(data.message, !data.accepted);
+        } catch (err) {
+            setBlock("restartOutput", err.message, true);
+            StoreDemo.setOutput("Restart request failed: " + err.message, true);
+        }
+    }
+
+    function syncAutoLogs() {
+        var auto = document.getElementById("autoLogs").checked;
+        if (!auto) {
+            if (logIntervalId) {
+                clearInterval(logIntervalId);
+                logIntervalId = null;
+            }
+            return;
+        }
+
+        if (!logIntervalId) {
+            logIntervalId = setInterval(refreshLogs, 5000);
+        }
+    }
+
+    document.getElementById("refreshConfigBtn").addEventListener("click", refreshConfig);
+    document.getElementById("testDbBtn").addEventListener("click", testDatabase);
+    document.getElementById("testKafkaBtn").addEventListener("click", testKafka);
+    document.getElementById("applyBtn").addEventListener("click", applyConfig);
+    document.getElementById("restartBtn").addEventListener("click", restartApplication);
+    document.getElementById("refreshLogsBtn").addEventListener("click", refreshLogs);
+    document.getElementById("autoLogs").addEventListener("change", syncAutoLogs);
+
+    refreshConfig();
+    refreshLogs();
+</script>
+</body>
+</html>
