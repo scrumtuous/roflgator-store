@@ -1,5 +1,17 @@
 # Simple store purchases with Spring Kafka
 
+
+git clone https://github.com/scrumtuous/roflgator-store.git
+
+docker build --platform linux/amd64 -t cameron/store:latest .
+
+aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 994818766469.dkr.ecr.us-east-2.amazonaws.com
+
+docker push 994818766469.dkr.ecr.us-east-2.amazonaws.com/cameron/store:latest
+
+docker push 994818766469.dkr.ecr.us-east-2.amazonaws.com/cameron/store:latest
+
+
 ## Run
 
 Requires Java 17+ and Maven. From this folder:
