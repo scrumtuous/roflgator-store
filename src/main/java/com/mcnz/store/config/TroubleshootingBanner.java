@@ -5,6 +5,8 @@ import java.io.PrintStream;
 import org.springframework.boot.Banner;
 import org.springframework.core.env.Environment;
 
+import com.mcnz.store.messaging.StoreKafkaTopics;
+
 public class TroubleshootingBanner implements Banner {
 
     @Override

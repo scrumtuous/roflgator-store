@@ -6,6 +6,8 @@ import java.util.Objects;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
+import com.mcnz.store.messaging.StoreKafkaTopics;
+
 @Service
 public class RuntimeConfigState {
 

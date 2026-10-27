@@ -44,8 +44,15 @@ public class App implements CommandLineRunner {
         Path overridesPath = prepareOverridesFile();
         registerOverridesLocation(overridesPath);
 
-        if (shouldStartEmbeddedKafka(overridesPath, args)) {
+        EmbeddedKafkaDecision embeddedKafkaDecision = evaluateEmbeddedKafkaDecision(overridesPath, args);
+        if (embeddedKafkaDecision.start()) {
+            log.info("Startup decision: starting embedded Kafka for profiles='{}' because spring.kafka.bootstrap-servers was not explicitly set.",
+                    blankAs(embeddedKafkaDecision.profiles(), "(none)"));
             FakeKafka.start();
+        } else {
+            log.info("Startup decision: skipping embedded Kafka for profiles='{}' with bootstrapServers='{}'.",
+                    blankAs(embeddedKafkaDecision.profiles(), "(none)"),
+                    blankAs(embeddedKafkaDecision.bootstrapServers(), "(unset)"));
         }
 
         SpringApplication.run(App.class, args);
@@ -136,13 +143,17 @@ public class App implements CommandLineRunner {
         }
     }
 
-    private static boolean shouldStartEmbeddedKafka(Path overridesPath, String[] args) {
-        String active = firstNonBlank(
+    private static EmbeddedKafkaDecision evaluateEmbeddedKafkaDecision(Path overridesPath, String[] args) {
+        String activeOrDefaultProfiles = firstNonBlank(
                 extractActiveProfileFromArgs(args),
                 System.getProperty("spring.profiles.active"),
                 System.getenv("SPRING_PROFILES_ACTIVE"),
                 readOverridesProfile(overridesPath),
-                "aws");
+                extractDefaultProfileFromArgs(args),
+                System.getProperty("spring.profiles.default"),
+                System.getenv("SPRING_PROFILES_DEFAULT"),
+                readOverridesProperty(overridesPath, "spring.profiles.default"),
+                "dev");
 
         String explicitBootstrapServers = firstNonBlank(
                 extractKafkaBootstrapFromArgs(args),
@@ -150,13 +161,17 @@ public class App implements CommandLineRunner {
                 System.getenv("SPRING_KAFKA_BOOTSTRAP_SERVERS"),
                 readOverridesProperty(overridesPath, "spring.kafka.bootstrap-servers"));
 
-        String[] profiles = active.split(",");
+        String[] profiles = activeOrDefaultProfiles.split(",");
+        boolean devProfileSelected = false;
         for (String profile : profiles) {
             if ("dev".equalsIgnoreCase(profile.trim())) {
-                return explicitBootstrapServers.isBlank();
+                devProfileSelected = true;
+                break;
             }
         }
-        return false;
+
+        boolean shouldStart = devProfileSelected && explicitBootstrapServers.isBlank();
+        return new EmbeddedKafkaDecision(shouldStart, activeOrDefaultProfiles, explicitBootstrapServers);
     }
 
     private static String readOverridesProfile(Path overridesPath) {
@@ -183,6 +198,10 @@ public class App implements CommandLineRunner {
 
     private static String extractKafkaBootstrapFromArgs(String[] args) {
         return extractSpringArg(args, "spring.kafka.bootstrap-servers");
+    }
+
+    private static String extractDefaultProfileFromArgs(String[] args) {
+        return extractSpringArg(args, "spring.profiles.default");
     }
 
     private static String extractSpringArg(String[] args, String key) {
@@ -212,5 +231,8 @@ public class App implements CommandLineRunner {
             return fallback;
         }
         return value;
+    }
+
+    private record EmbeddedKafkaDecision(boolean start, String profiles, String bootstrapServers) {
     }
 }

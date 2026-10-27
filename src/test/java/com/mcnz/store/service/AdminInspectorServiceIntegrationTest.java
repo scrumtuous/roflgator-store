@@ -29,8 +29,8 @@ import org.springframework.mock.env.MockEnvironment;
 import com.mcnz.store.config.ContainerConfigFileService;
 import com.mcnz.store.config.RuntimeConfigState;
 import com.mcnz.store.config.RuntimeDataSourceConfiguration;
-import com.mcnz.store.config.StoreKafkaTopics;
 import com.mcnz.store.config.SwappableDataSource;
+import com.mcnz.store.messaging.StoreKafkaTopics;
 
 class AdminInspectorServiceIntegrationTest {
 

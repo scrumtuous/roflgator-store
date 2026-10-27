@@ -1,6 +1,5 @@
 package com.mcnz.store.messaging;
 
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Service;
 import com.mcnz.store.Product;
 import com.mcnz.store.Purchase;
 import com.mcnz.store.PurchaseStatus;
-import com.mcnz.store.config.StoreKafkaTopics;
 import com.mcnz.store.service.StoreService;
 
 @Service
@@ -37,14 +35,19 @@ public class StoreConsumers {
 
         System.out.println("VALIDATED: " + product.name);
         storeService.updatePurchaseStatus(purchaseId, PurchaseStatus.VALIDATED);
-        kafka.send(StoreKafkaTopics.PROCESS, Objects.requireNonNull(purchaseId)).join();
+        kafka.send(StoreKafkaTopics.PROCESS, purchaseId)
+        .whenComplete((result, error) -> {
+            if (error != null) {
+                error.printStackTrace();
+            }
+        });
     }
 
     @KafkaListener(topics = StoreKafkaTopics.PROCESS, groupId = "processors")
     public void process(Long purchaseId) {
     	System.out.println("In the processing listener");
         try {
-            TimeUnit.SECONDS.sleep(60);
+            TimeUnit.SECONDS.sleep(1);
         } catch (InterruptedException interruptedException) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted while waiting to complete purchase", interruptedException);
